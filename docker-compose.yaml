@@ -1,0 +1,41 @@
+version: "3"
+
+services:
+    desafio2-mysql:
+        container_name: desafio2-mysql
+        image: mysql:5.7
+        volumes: 
+            - ./dbdata:/var/lib/mysql
+            - ./mysql:/docker-entrypoint-initdb.d
+        environment: 
+            - MYSQL_ROOT_PASSWORD=root
+        networks:
+            - network-mysql-app
+    
+    desafio2-app:
+        container_name: desafio2-app
+        build: ./java
+        entrypoint: dockerize -wait tcp://desafio2-mysql:3306 -timeout 20s java -jar app.jar
+        depends_on:
+            - desafio2-mysql
+        networks:
+            - network-mysql-app
+            - network-app-nginx
+
+    desafio2-nginx:
+        container_name: desafio2-nginx
+        build: ./nginx
+        entrypoint: dockerize -wait http://desafio2-app:8080 -timeout 20s nginx -g 'daemon off;'
+        restart: always
+        ports:
+            - 8000:80
+        depends_on:
+            - desafio2-app
+        networks:
+            - network-app-nginx
+
+networks:
+    network-mysql-app:
+        driver: bridge
+    network-app-nginx:
+        driver: bridge
